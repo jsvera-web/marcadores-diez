@@ -18,39 +18,64 @@
     </style>
   </head>
   <body>
-    <!-- Botón inicial para activar cámara -->
+    <!-- Botón inicial para activar cámara y habilitar reproducción -->
     <div id="overlay">
       <button id="btn">ACTIVAR CÁMARA AR</button>
     </div>
 
     <a-scene mindar-image="imageTargetSrc: ./targets.mind;" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+      <a-assets>
+        <!-- Tu archivo de video vertical (9:16) -->
+        <video id="mi-video" 
+               src="./video.mp4" 
+               preload="auto" 
+               loop 
+               crossorigin="anonymous" 
+               playsinline 
+               webkit-playsinline>
+        </video>
+      </a-assets>
+
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity mindar-image-target="targetIndex: 0" id="objetivo">
-        <!-- PLANO DE AVANCE (Cuadrado con marco y texto que sigue al rastreador) -->
-        <a-plane position="0 0 0" width="1" height="1" color="#121212" material="opacity: 0.92; transparent: true">
-          <a-ring radius-inner="0.48" radius-outer="0.5" position="0 0 0.01" color="#00E5FF"></a-ring>
-          <a-text value="RASTREO ACTIVO\n\n[Espacio reservado\npara el video]" 
-                  align="center" 
-                  position="0 0 0.02" 
-                  width="1.8" 
-                  color="#FFFFFF">
-          </a-text>
-        </a-plane>
+        <!-- PLANO DE VIDEO EN FORMATO VERTICAL (9:16) -->
+        <a-video src="#mi-video" 
+                 position="0 0 0" 
+                 width="1" 
+                 height="1.778" 
+                 rotation="0 0 0">
+        </a-video>
       </a-entity>
     </a-scene>
 
     <script>
       const btn = document.querySelector("#btn");
       const overlay = document.querySelector("#overlay");
+      const video = document.querySelector("#mi-video");
+      const target = document.querySelector("#objetivo");
 
       btn.addEventListener('click', () => {
         overlay.style.display = "none";
+        
+        // Habilitar permisos de reproducción para navegadores móviles
+        video.play().then(() => {
+          video.pause();
+        }).catch(err => {
+          console.warn("Reproducción en espera del objetivo:", err);
+        });
       });
 
-      const target = document.querySelector("#objetivo");
+      // Reproducir al enfocar la imagen
       target.addEventListener("targetFound", () => {
         console.log("Objetivo detectado");
+        video.play();
+      });
+
+      // Pausar si se pierde de vista
+      target.addEventListener("targetLost", () => {
+        console.log("Objetivo perdido");
+        video.pause();
       });
     </script>
   </body>
