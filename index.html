@@ -15,22 +15,21 @@
         border: none; border-radius: 50px; cursor: pointer; font-weight: bold; font-family: sans-serif;
         box-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
       }
-      /* Botón para activar o silenciar audio */
       #mute-btn {
         position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
-        z-index: 999; padding: 12px 24px; font-size: 14px; background: rgba(0, 0, 0, 0.7);
+        z-index: 999; padding: 12px 24px; font-size: 14px; background: rgba(0, 0, 0, 0.75);
         color: #fff; border: 2px solid #00E5FF; border-radius: 30px; cursor: pointer;
         font-family: sans-serif; display: none;
       }
     </style>
   </head>
   <body>
-    <!-- Pantalla de bienvenida -->
+    <!-- Pantalla inicial con botón -->
     <div id="overlay">
       <button id="btn">ACTIVAR CÁMARA AR</button>
     </div>
 
-    <!-- Botón de sonido flotante -->
+    <!-- Botón para alternar audio -->
     <button id="mute-btn">🔊 ACTIVAR SONIDO</button>
 
     <a-scene mindar-image="imageTargetSrc: ./targets.mind;" 
@@ -38,13 +37,12 @@
              device-orientation-permission-ui="enabled: false">
              
       <a-assets timeout="10000">
-        <!-- 'muted' es OBLIGATORIO para que Safari y Chrome permitan reproducir en AR -->
+        <!-- Sin autoplay en HTML para no bloquear la reproducción móvil -->
         <video id="mi-video" 
                src="./video.mp4" 
                preload="auto" 
                loop 
                muted 
-               autoplay 
                playsinline 
                webkit-playsinline 
                crossorigin="anonymous">
@@ -54,13 +52,15 @@
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity mindar-image-target="targetIndex: 0" id="objetivo">
-        <!-- Plano vertical 9:16 -->
-        <a-video src="#mi-video" 
+        <!-- Usamos a-plane en vez de a-video (mucho más confiable en móviles) -->
+        <a-plane id="video-display"
+                 src="#mi-video" 
                  position="0 0 0" 
                  width="1" 
                  height="1.778" 
-                 rotation="0 0 0">
-        </a-video>
+                 rotation="0 0 0"
+                 material="shader: flat; side: double">
+        </a-plane>
       </a-entity>
     </a-scene>
 
@@ -71,29 +71,49 @@
       const video = document.querySelector("#mi-video");
       const target = document.querySelector("#objetivo");
 
+      let isTargetFound = false;
+
+      // 1. Al presionar el botón de inicio, se desbloquea el reproductor en el navegador móvil
       btn.addEventListener('click', () => {
         overlay.style.display = "none";
         muteBtn.style.display = "block";
 
-        // Iniciamos la reproducción silenciada (permitida por todos los navegadores)
-        video.play().catch(err => console.log("Esperando objetivo para reproducir...", err));
+        video.muted = true;
+        // Iniciamos la reproducción inmediatamente para que el móvil no bloquee el video
+        video.play().then(() => {
+          if (!isTargetFound) {
+            video.pause(); // Si aún no ve el marcador, lo dejamos listo y pausado
+          }
+        }).catch(err => {
+          console.log("Esperando detección:", err);
+        });
       });
 
-      // Alternar sonido con el botón flotante
+      // 2. Control de sonido
       muteBtn.addEventListener('click', () => {
         video.muted = !video.muted;
         muteBtn.textContent = video.muted ? "🔊 ACTIVAR SONIDO" : "🔇 SILENCIAR";
       });
 
-      // Control al enfocar el marcador
+      // 3. Cuando la cámara detecta el marcador físico
       target.addEventListener("targetFound", () => {
-        console.log("Objetivo encontrado");
-        video.play().catch(err => console.error("Error al reproducir video:", err));
+        console.log("Marcador detectado");
+        isTargetFound = true;
+        video.play().catch(e => console.log("Error al reproducir:", e));
       });
 
+      // 4. Cuando se pierde de vista el marcador
       target.addEventListener("targetLost", () => {
-        console.log("Objetivo perdido");
+        console.log("Marcador perdido");
+        isTargetFound = false;
         video.pause();
+      });
+
+      // Toque en cualquier parte de la pantalla para reanudar si el navegador lo pausa
+      window.addEventListener('touchstart', () => {
+        if (isTargetFound && video.paused) {
+          video.play();
+        }
       });
     </script>
   </body>
