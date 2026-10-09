@@ -8,58 +8,68 @@
       body { margin: 0; overflow: hidden; }
       #overlay {
         position: absolute; z-index: 1000; top: 0; left: 0; width: 100%; height: 100%;
-        display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.85);
+        display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        background: rgba(0, 0, 0, 0.9);
       }
       #btn {
         padding: 18px 36px; font-size: 18px; background: #00E5FF; color: #111; 
         border: none; border-radius: 50px; cursor: pointer; font-weight: bold; font-family: sans-serif;
         box-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
       }
+      /* Barra flotante para sonido y diagnóstico */
+      #ui-container {
+        position: absolute; bottom: 20px; left: 0; width: 100%; z-index: 999;
+        display: none; text-align: center;
+      }
       #mute-btn {
-        position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
-        z-index: 999; padding: 12px 24px; font-size: 14px; background: rgba(0, 0, 0, 0.75);
+        padding: 12px 24px; font-size: 15px; background: rgba(0, 0, 0, 0.8);
         color: #fff; border: 2px solid #00E5FF; border-radius: 30px; cursor: pointer;
-        font-family: sans-serif; display: none;
+        font-family: sans-serif; font-weight: bold;
+      }
+      #debug-msg {
+        color: #00E5FF; font-family: monospace; font-size: 12px; margin-top: 8px;
+        background: rgba(0,0,0,0.6); display: inline-block; padding: 4px 10px; border-radius: 10px;
       }
     </style>
   </head>
   <body>
-    <!-- Pantalla inicial con botón -->
+    <!-- Pantalla de inicio con botón -->
     <div id="overlay">
       <button id="btn">ACTIVAR CÁMARA AR</button>
     </div>
 
-    <!-- Botón para alternar audio -->
-    <button id="mute-btn">🔊 ACTIVAR SONIDO</button>
+    <!-- Controles flotantes en AR -->
+    <div id="ui-container">
+      <button id="mute-btn">🔊 ACTIVAR SONIDO</button><br>
+      <div id="debug-msg">Estado: Esperando cámara...</div>
+    </div>
 
     <a-scene mindar-image="imageTargetSrc: ./targets.mind;" 
              vr-mode-ui="enabled: false" 
              device-orientation-permission-ui="enabled: false">
              
       <a-assets timeout="10000">
-        <!-- Sin autoplay en HTML para no bloquear la reproducción móvil -->
+        <!-- QUITAMOS crossorigin="anonymous" (causante del rectángulo negro en GitHub) -->
         <video id="mi-video" 
                src="./video.mp4" 
                preload="auto" 
                loop 
                muted 
                playsinline 
-               webkit-playsinline 
-               crossorigin="anonymous">
+               webkit-playsinline>
         </video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity mindar-image-target="targetIndex: 0" id="objetivo">
-        <!-- Usamos a-plane en vez de a-video (mucho más confiable en móviles) -->
-        <a-plane id="video-display"
-                 src="#mi-video" 
+        <!-- Plano vertical 9:16 -->
+        <a-plane id="video-mesh"
+                 material="src: #mi-video; shader: flat" 
                  position="0 0 0" 
                  width="1" 
                  height="1.778" 
-                 rotation="0 0 0"
-                 material="shader: flat; side: double">
+                 rotation="0 0 0">
         </a-plane>
       </a-entity>
     </a-scene>
@@ -67,25 +77,30 @@
     <script>
       const btn = document.querySelector("#btn");
       const overlay = document.querySelector("#overlay");
+      const uiContainer = document.querySelector("#ui-container");
       const muteBtn = document.querySelector("#mute-btn");
+      const debugMsg = document.querySelector("#debug-msg");
       const video = document.querySelector("#mi-video");
       const target = document.querySelector("#objetivo");
 
-      let isTargetFound = false;
+      // Diagnóstico en pantalla si el archivo de video no existe o tiene error de códec
+      video.addEventListener('error', (e) => {
+        debugMsg.textContent = "Error: no se pudo cargar el video (comprueba que exista video.mp4)";
+        debugMsg.style.color = "#FF4444";
+        console.error("Error cargando el video:", e);
+      });
 
-      // 1. Al presionar el botón de inicio, se desbloquea el reproductor en el navegador móvil
+      // 1. Al presionar el botón de inicio
       btn.addEventListener('click', () => {
         overlay.style.display = "none";
-        muteBtn.style.display = "block";
+        uiContainer.style.display = "block";
 
         video.muted = true;
-        // Iniciamos la reproducción inmediatamente para que el móvil no bloquee el video
+        // IMPORTANTE: Dejarlo reproduciendo en segundo plano para que WebGL tenga cuadros listos
         video.play().then(() => {
-          if (!isTargetFound) {
-            video.pause(); // Si aún no ve el marcador, lo dejamos listo y pausado
-          }
+          debugMsg.textContent = "Video listo. Enfoca el marcador...";
         }).catch(err => {
-          console.log("Esperando detección:", err);
+          debugMsg.textContent = "Toca la pantalla para reproducir";
         });
       });
 
@@ -95,23 +110,17 @@
         muteBtn.textContent = video.muted ? "🔊 ACTIVAR SONIDO" : "🔇 SILENCIAR";
       });
 
-      // 3. Cuando la cámara detecta el marcador físico
+      // 3. Cuando el marcador es detectado
       target.addEventListener("targetFound", () => {
-        console.log("Marcador detectado");
-        isTargetFound = true;
-        video.play().catch(e => console.log("Error al reproducir:", e));
+        debugMsg.textContent = "¡Marcador detectado!";
+        // Si estaba pausado, lo reproduce; si ya estaba corriendo, lo reinicia al inicio
+        video.currentTime = 0;
+        video.play().catch(e => console.log(e));
       });
 
-      // 4. Cuando se pierde de vista el marcador
-      target.addEventListener("targetLost", () => {
-        console.log("Marcador perdido");
-        isTargetFound = false;
-        video.pause();
-      });
-
-      // Toque en cualquier parte de la pantalla para reanudar si el navegador lo pausa
+      // 4. Si tocas la pantalla en cualquier momento, fuerza a reproducir
       window.addEventListener('touchstart', () => {
-        if (isTargetFound && video.paused) {
+        if (video.paused) {
           video.play();
         }
       });
