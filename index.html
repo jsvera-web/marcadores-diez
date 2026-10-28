@@ -2,202 +2,101 @@
 <html lang="es">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-    <title>Experiencia AR Corporativa</title>
+    <title>Diez Cero Uno ≠ AR</title>
     <!-- Librerías de A-Frame y MindAR -->
     <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap');
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
         overflow: hidden;
-        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        font-family: 'Montserrat', sans-serif;
+        background-color: #000;
       }
 
-      /* 1. LOGO PERMANENTE EN LA ESQUINA SUPERIOR IZQUIERDA */
-      #brand-logo {
+      /* LOGO FIJO EN LA ESQUINA SUPERIOR IZQUIERDA */
+      #brand-header {
         position: fixed;
         top: 20px;
         left: 20px;
-        width: 75px;            /* Tamaño del logo en pantalla */
-        max-width: 25vw;
-        height: auto;
-        z-index: 1000;          /* Siempre visible por encima de la cámara */
-        pointer-events: none;   /* Evita que bloquee toques en la pantalla */
-        filter: drop-shadow(0px 2px 6px rgba(0, 0, 0, 0.7)); /* Sombra para resaltar sobre cualquier fondo */
+        z-index: 1000;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
       }
 
-      /* 2. PANTALLA INICIAL DE BIENVENIDA (Negro / Rojo) */
+      #brand-logo-img {
+        height: 38px;
+        width: auto;
+        filter: drop-shadow(0 2px 8px rgba(0,0,0,0.9));
+      }
+
+      /* PANTALLA DE INICIO (BLACKOUT CON ROJO) */
       #overlay {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(10, 10, 10, 0.92); /* Fondo negro elegante */
+        background: #000000;
         z-index: 99999;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 20px;
-        box-sizing: border-box;
-      }
-
-      /* Logo grande de bienvenida opcional */
-      #welcome-logo {
-        width: 110px;
-        margin-bottom: 25px;
-        filter: drop-shadow(0px 4px 10px rgba(0, 0, 0, 0.9));
-      }
-
-      /* 3. BOTÓN DE ACTIVACIÓN (Rojo corporativo con letras blancas) */
-      #btn-start {
-        padding: 16px 36px;
-        font-size: 17px;
-        font-weight: 700;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        background: #E50914;      /* Rojo de la marca */
-        color: #FFFFFF;           /* Texto blanco */
-        border: 2px solid #FFFFFF;/* Borde blanco sutil */
-        border-radius: 50px;
-        cursor: pointer;
-        box-shadow: 0 4px 20px rgba(229, 9, 20, 0.6);
-        transition: transform 0.2s, background-color 0.2s;
-      }
-
-      #btn-start:active {
-        transform: scale(0.96);
-        background: #B20710;
-      }
-
-      /* Texto instructivo debajo del botón */
-      #instrucciones {
-        color: #CCCCCC;
-        font-size: 14px;
-        margin-top: 15px;
+        padding: 24px;
         text-align: center;
       }
 
-      /* 4. BOTÓN FLOTANTE DE SONIDO (Negro, Rojo y Blanco) */
-      #btn-sound {
-        position: fixed;
-        bottom: 30px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 999;
-        padding: 12px 26px;
-        background: rgba(15, 15, 15, 0.85); /* Fondo negro */
-        color: #FFFFFF;                      /* Blanco */
-        border: 2px solid #E50914;           /* Borde rojo */
-        border-radius: 30px;
-        font-size: 14px;
-        font-weight: bold;
-        cursor: pointer;
-        display: none;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      /* TÍTULO PRINCIPAL DE LA MARCA CON EL SÍMBOLO ROJO */
+      .brand-title {
+        color: #FFFFFF;
+        font-size: 32px;
+        font-weight: 900;
+        letter-spacing: 3px;
+        line-height: 1.1;
+        margin-bottom: 30px;
+        text-transform: uppercase;
       }
-    </style>
-  </head>
-  <body>
 
-    <!-- LOGO FIJO DURANTE TODA LA EXPERIENCIA -->
-    <img id="brand-logo" src="./logo.png" alt="Logo de la marca" />
+      .red-accent {
+        color: #E50000;
+      }
 
-    <!-- PANTALLA INICIAL -->
-    <div id="overlay">
-      <!-- Muestra el logo también en grande al inicio -->
-      <img id="welcome-logo" src="./logo.png" alt="Logo" />
-      <button id="btn-start">ACTIVAR CÁMARA AR</button>
-      <p id="instrucciones">Apunta con la cámara al marcador para reproducir</p>
-    </div>
+      /* BOTÓN PRINCIPAL: ESTILO URBANO DIEZ CERO UNO */
+      #btn-start {
+        width: 85%;
+        max-width: 320px;
+        padding: 18px 24px;
+        font-size: 16px;
+        font-weight: 900;
+        font-family: 'Montserrat', sans-serif;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        background-color: #E50000;
+        color: #FFFFFF;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        box-shadow: 0 0 25px rgba(229, 0, 0, 0.45);
+        transition: all 0.2s ease;
+      }
 
-    <!-- BOTÓN PARA CONTROLAR EL AUDIO -->
-    <button id="btn-sound">🔊 ACTIVAR AUDIO</button>
+      #btn-start:active {
+        background-color: #B30000;
+        transform: scale(0.98);
+      }
 
-    <!-- ESCENA DE REALIDAD AUMENTADA -->
-    <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind;"
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: false">
-
-      <!-- Recursos de video -->
-      <a-assets timeout="10000">
-        <video
-          id="video-ar"
-          src="./video.mp4"
-          preload="auto"
-          loop
-          crossorigin="anonymous"
-          playsinline
-          webkit-playsinline
-          muted>
-        </video>
-      </a-assets>
-
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-      <!-- Marcador 0 -->
-      <a-entity mindar-image-target="targetIndex: 0" id="objetivo">
-        <!-- Video vertical proporción 9:16 (ancho 1, alto 1.78) -->
-        <a-video
-          src="#video-ar"
-          width="1"
-          height="1.78"
-          position="0 0 0"
-          rotation="0 0 0"
-          material="shader: flat;">
-        </a-video>
-      </a-entity>
-    </a-scene>
-
-    <script>
-      const btnStart = document.querySelector("#btn-start");
-      const btnSound = document.querySelector("#btn-sound");
-      const overlay = document.querySelector("#overlay");
-      const video = document.querySelector("#video-ar");
-      const target = document.querySelector("#objetivo");
-
-      // 1. Al presionar "ACTIVAR CÁMARA AR"
-      btnStart.addEventListener("click", () => {
-        overlay.style.display = "none";
-        
-        // Habilita el reproductor en móviles
-        video.play().then(() => {
-          video.pause();
-        }).catch(e => console.log("Video listo:", e));
-      });
-
-      // 2. Al detectar el marcador físico
-      target.addEventListener("targetFound", () => {
-        video.play().then(() => {
-          if (video.muted) {
-            btnSound.style.display = "block";
-          }
-        }).catch(() => {
-          video.muted = true;
-          video.play();
-          btnSound.style.display = "block";
-        });
-      });
-
-      // 3. Al perder el marcador
-      target.addEventListener("targetLost", () => {
-        video.pause();
-        btnSound.style.display = "none";
-      });
-
-      // 4. Activar o desactivar sonido
-      btnSound.addEventListener("click", () => {
-        if (video.muted) {
-          video.muted = false;
-          btnSound.textContent = "🔇 SILENCIAR AUDIO";
-        } else {
-          video.muted = true;
-          btnSound.textContent = "🔊 ACTIVAR AUDIO";
-        }
-      });
-    </script>
-  </body>
-</html>
+      #instructions {
+        color: #888888;
+        font-size: 13px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-to
